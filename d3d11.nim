@@ -1,13 +1,20 @@
-import winim/lean
+import winim
 
 {.passL: "d3d11.lib".}
 {.pragma: d3d11_header, header: "d3d11.h".}
-# {.pragma: d3d9_header, header: "Include/D3D11.h".}
 
 const 
     DXGI_USAGE_RENDER_TARGET_OUTPUT = 32
 
 type 
+    D3D_DRIVER_TYPE* {.importcpp: "enum D3D_DRIVER_TYPE", d3d11_header, pure.} = enum
+        D3D_DRIVER_TYPE_UNKNOWN = 0,
+        D3D_DRIVER_TYPE_HARDWARE = 1,
+        D3D_DRIVER_TYPE_REFERENCE = 2,
+        D3D_DRIVER_TYPE_NULL = 3,
+        D3D_DRIVER_TYPE_SOFTWARE = 4,
+        D3D_DRIVER_TYPE_WARP = 5
+
     D3D_FEATURE_LEVEL* {.importcpp: "enum D3D_FEATURE_LEVEL", d3d11_header, pure.} = enum
         D3D_FEATURE_LEVEL_9_1 = 0x9100,
         D3D_FEATURE_LEVEL_9_2 = 0x9200,
@@ -124,8 +131,8 @@ type
         DXGI_FORMAT_FORCE_UINT                  = 0xffffffff
 
     DXGI_RATIONAL* {.importcpp: "struct DXGI_RATIONAL", d3d11_header, pure.} = object
-        Numerator*: uint
-        Denominator*: uint
+        Numerator*: UINT
+        Denominator*: UINT
 
     DXGI_MODE_SCANLINE_ORDER* {.importcpp: "enum DXGI_MODE_SCANLINE_ORDER", d3d11_header, pure.} = enum
         DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED        = 0,
@@ -146,16 +153,16 @@ type
         DXGI_MODE_ROTATION_ROTATE270    = 4
 
     DXGI_MODE_DESC* {.importcpp: "struct DXGI_MODE_DESC", d3d11_header, pure.} = object
-        Width*: uint
-        Height*: uint
+        Width*: UINT
+        Height*: UINT
         RefreshRate*: DXGI_RATIONAL
         Format*: DXGI_FORMAT
         ScanlineOrdering*: DXGI_MODE_SCANLINE_ORDER
         Scaling*: DXGI_MODE_SCALING
 
     DXGI_SAMPLE_DESC* {.importcpp: "struct DXGI_SAMPLE_DESC", d3d11_header, pure.} = object
-        Count*: uint
-        Quality*: uint
+        Count*: UINT
+        Quality*: UINT
 
     DXGI_SWAP_EFFECT* {.importcpp: "enum DXGI_SWAP_EFFECT", d3d11_header, pure.} = enum
         DXGI_SWAP_EFFECT_DISCARD = 0,
@@ -169,12 +176,12 @@ type
     DXGI_SWAP_CHAIN_DESC* {.importcpp: "struct DXGI_SWAP_CHAIN_DESC", d3d11_header, pure.} = object
         BufferDesc*: DXGI_MODE_DESC
         SampleDesc*: DXGI_SAMPLE_DESC
-        BufferUsage*: uint
-        BufferCount*: uint
+        BufferUsage*: UINT
+        BufferCount*: UINT
         OutputWindow*: HWND
         Windowed*: bool
         SwapEffect*: DXGI_SWAP_EFFECT
-        Flags*: uint
+        Flags*: UINT
 
 type 
   #---------------------------------------------------------------------
@@ -183,20 +190,101 @@ type
     IDXGISwapChain* {.importcpp: "IDXGISwapChain",  d3d11_header, inheritable, pure.} = object
     ID3D11RenderTargetView* {.importcpp: "ID3D11RenderTargetView",  d3d11_header, inheritable, pure.} = object
 
+type 
+    #--------------------------------------------------------------------- DXGIType
+    DXGI_RGB* {.importcpp: "DXGI_RGB",  d3d11_header, inheritable, pure.} = object
+        Red*: float
+        Green*: float
+        Blue*: float
+
+    DXGI_GAMMA_CONTROL* {.importcpp: "DXGI_GAMMA_CONTROL",  d3d11_header, inheritable, pure.} = object
+        Scale: DXGI_RGB
+        Offset: DXGI_RGB
+        # GammaCurve: DXGI_RGB[ 1025 ]
+
+    DXGI_GAMMA_CONTROL_CAPABILITIES* {.importcpp: "DXGI_GAMMA_CONTROL_CAPABILITIES",  d3d11_header, inheritable, pure.} = object
+        ScaleAndOffsetSupported: bool
+        MaxConvertedValue: float
+        MinConvertedValue: float
+        NumGammaControlPoints: UINT
+        # float ControlPointPositions[1025];
+
+    #--------------------------------------------------------------------- DXGI
+    DXGI_OUTPUT_DESC* {.importcpp: "DXGI_OUTPUT_DESC",  d3d11_header, inheritable, pure.} = object
+        # WCHAR DeviceName[ 32 ]
+        DesktopCoordinates*: RECT
+        AttachedToDesktop*: bool
+        Rotation: DXGI_MODE_ROTATION
+        Monitor: HMONITOR
+
+    DXGI_FRAME_STATISTICS* {.importcpp: "DXGI_FRAME_STATISTICS",  d3d11_header, inheritable, pure.} = object
+        PresentCount*: UINT
+        PresentRefreshCount*: UINT
+        SyncRefreshCount*: UINT
+        SyncQPCTime*: LARGE_INTEGER
+        SyncGPUTime*: LARGE_INTEGER
+
+    DXGI_MAPPED_RECT* {.importcpp: "DXGI_MAPPED_RECT",  d3d11_header, inheritable, pure.} = object
+        Pitch*: INT
+        pBits*: ptr BYTE
+
+    DXGI_ADAPTER_DESC* {.importcpp: "DXGI_ADAPTER_DESC",  d3d11_header, inheritable, pure.} = object
+        # WCHAR Description[ 128 ];
+        VendorId*: UINT
+        DeviceId*: UINT
+        SubSysId*: UINT
+        Revision*: UINT
+        DedicatedVideoMemory*: SIZE_T
+        DedicatedSystemMemory*: SIZE_T
+        SharedSystemMemory*: SIZE_T
+        AdapterLuid*: LUID
+
+    DXGI_SURFACE_DESC* {.importcpp: "DXGI_SURFACE_DESC",  d3d11_header, inheritable, pure.} = object
+        Width*: UINT
+        Height*: UINT
+        Format*: DXGI_FORMAT
+        SampleDesc*: DXGI_SAMPLE_DESC
+
+    IDXGISurface* {.importcpp: "IDXGISurface",  d3d11_header, inheritable, pure.} = object
+        GetDesc*: proc(pDesc: ptr DXGI_SURFACE_DESC): HRESULT {.stdcall.}
+        Map*: proc(pLockedRect: ptr DXGI_MAPPED_RECT, MapFlags: UINT): HRESULT {.stdcall.}
+        Unmap*: proc(): HRESULT {.stdcall.}
+
+    IDXGIOutput* {.importcpp: "IDXGIOutput",  d3d11_header, inheritable, pure.} = object
+        GetDesc*: proc(pDesc: ptr DXGI_OUTPUT_DESC): HRESULT {.stdcall.}
+        GetDisplayModeList*: proc(EnumFormat: DXGI_FORMAT, Flags: UINT, pNumModes: ptr UINT, pDesc: ptr DXGI_MODE_DESC): HRESULT {.stdcall.}
+        FindClosestMatchingMode*: proc(pModeToMatch: ptr DXGI_MODE_DESC, pClosestMatch: ptr DXGI_MODE_DESC, pConcernedDevice: ptr IUnknown): HRESULT {.stdcall.}
+        WaitForVBlank*: proc(): HRESULT {.stdcall.}
+        TakeOwnership*: proc(pDevice: ptr IUnknown, Exclusive: bool): HRESULT {.stdcall.}
+        ReleaseOwnership*: proc(): void {.stdcall.}
+        GetGammaControlCapabilities*: proc(pGammaCaps: ptr DXGI_GAMMA_CONTROL_CAPABILITIES): HRESULT {.stdcall.}
+        SetGammaControl*: proc(pArray: ptr DXGI_GAMMA_CONTROL): HRESULT {.stdcall.}
+        GetGammaControl*: proc(pArray: ptr DXGI_GAMMA_CONTROL): HRESULT {.stdcall.}
+        SetDisplaySurface*: proc(pScanoutSurface: ptr IDXGISurface): HRESULT {.stdcall.}
+        GetDisplaySurfaceData*: proc(pDestination: ptr IDXGISurface): HRESULT {.stdcall.}
+        GetFrameStatistics*: proc(pStats: ptr DXGI_FRAME_STATISTICS): HRESULT {.stdcall.}
+
+    IDXGIAdapter* {.importcpp: "IDXGIAdapter",  d3d11_header, inheritable, pure.} = object
+        EnumOutputs*: proc(Output: UINT, ppOutput: ptr IDXGIOutput): HRESULT {.stdcall.}
+        GetDesc*: proc(pDesc: ptr DXGI_ADAPTER_DESC): HRESULT {.stdcall.}
+        CheckInterfaceSupport*: proc(InterfaceName: REFGUID, pUMDVersion: ptr LARGE_INTEGER): HRESULT {.stdcall.}
+
+
+proc D3D11CreateDeviceAndSwapChain(pAdapter: ptr IDXGIAdapter, DriverType: D3D_DRIVER_TYPE, Software: HMODULE, Flags: UINT, pFeatureLevels: ptr D3D_FEATURE_LEVEL, FeatureLevels: UINT, SDKVersion: UINT, pSwapChainDesc: ptr DXGI_SWAP_CHAIN_DESC, ppSwapChain: ptr IDXGISwapChain, ppDevice: ptr ID3D11Device, pFeatureLevel: ptr D3D_FEATURE_LEVEL, ppImmediateContext: ID3D11DeviceContext ): HRESULT {.importcpp: "D3D11CreateDeviceAndSwapChain", d3d11_header, stdcall, discardable.}
 
 var 
     g_pd3dDevice: ptr ID3D11Device = nil
     g_pd3dDeviceContext: ptr ID3D11DeviceContext = nil
     g_pSwapChain: ptr IDXGISwapChain = nil
-    g_ResizeWidth: uint = 0
-    g_ResizeHeight: uint = 0
+    g_ResizeWidth: UINT = 0
+    g_ResizeHeight: UINT = 0
     g_mainRenderTargetView: ptr ID3D11RenderTargetView = nil
  
 
 proc CreateDeviceD3D(hWnd: HWND): bool = 
     var 
         sd: DXGI_SWAP_CHAIN_DESC
-        createDeviceFlags: uint = 0
+        createDeviceFlags: UINT = 0
         featureLevel: D3D_FEATURE_LEVEL
 
     ZeroMemory(sd.addr, sizeof(sd))
@@ -206,7 +294,7 @@ proc CreateDeviceD3D(hWnd: HWND): bool =
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM
     sd.BufferDesc.RefreshRate.Numerator = 60
     sd.BufferDesc.RefreshRate.Denominator = 1
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH.uint
+    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH.UINT
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
     sd.OutputWindow = hWnd
     sd.SampleDesc.Count = 1
