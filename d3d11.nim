@@ -5,6 +5,7 @@ import winim
 
 const 
     DXGI_USAGE_RENDER_TARGET_OUTPUT = 32
+    D3D11_SDK_VERSION = 7
 
 type 
     D3D_DRIVER_TYPE* {.importcpp: "enum D3D_DRIVER_TYPE", d3d11_header, pure.} = enum
@@ -25,6 +26,34 @@ type
         D3D_FEATURE_LEVEL_11_1 = 0xb100,
         D3D_FEATURE_LEVEL_12_0 = 0xc000,
         D3D_FEATURE_LEVEL_12_1 = 0xc100
+
+    D3D11_TEXTURE2D_DESC* {.importcpp: "struct D3D11_TEXTURE2D_DESC", d3d11_header, pure.} = object
+        Width*: UINT
+        Height*: UINT
+        MipLevels*: UINT
+        ArraySize*: UINT
+        # Format*: DXGI_FORMAT
+        # SampleDesc*: DXGI_SAMPLE_DESC
+        # Usage: D3D11_USAGE
+        BindFlags*: UINT
+        CPUAccessFlags*: UINT
+        MiscFlags*: UINT
+
+    D3D11_RENDER_TARGET_VIEW_DESC* {.importcpp: "struct D3D11_RENDER_TARGET_VIEW_DESC", d3d11_header, pure.} = object
+        # Format*: DXGI_FORMAT
+    # D3D11_RTV_DIMENSION ViewDimension;
+    # union 
+    #     {
+    #     D3D11_BUFFER_RTV Buffer;
+    #     D3D11_TEX1D_RTV Texture1D;
+    #     D3D11_TEX1D_ARRAY_RTV Texture1DArray;
+    #     D3D11_TEX2D_RTV Texture2D;
+    #     D3D11_TEX2D_ARRAY_RTV Texture2DArray;
+    #     D3D11_TEX2DMS_RTV Texture2DMS;
+    #     D3D11_TEX2DMS_ARRAY_RTV Texture2DMSArray;
+    #     D3D11_TEX3D_RTV Texture3D;
+    #     } 	;
+    # } 	D3D11_RENDER_TARGET_VIEW_DESC;
 
 type
     DXGI_FORMAT* {.importcpp: "enum DXGI_FORMAT", d3d11_header, pure.} = enum
@@ -185,10 +214,25 @@ type
 
 type 
   #---------------------------------------------------------------------
-    ID3D11DeviceContext* {.importcpp: "ID3D11DeviceContext",  d3d11_header, inheritable, pure.} = object
-    ID3D11Device* {.importcpp: "ID3D11Device",  d3d11_header, inheritable, pure.} = object
-    IDXGISwapChain* {.importcpp: "IDXGISwapChain",  d3d11_header, inheritable, pure.} = object
-    ID3D11RenderTargetView* {.importcpp: "ID3D11RenderTargetView",  d3d11_header, inheritable, pure.} = object
+    ID3D11DeviceChild* {.importcpp: "ID3D11DeviceChild",  d3d11_header, inheritable, pure.} = object of IUnknownVtbl
+    ID3D11View* {.importcpp: "ID3D11View",  d3d11_header, inheritable, pure.} = object of ID3D11DeviceChild
+    ID3D11RenderTargetView* {.importcpp: "ID3D11RenderTargetView",  d3d11_header, inheritable, pure.} = object of ID3D11View
+    ID3D11Resource* {.importcpp: "ID3D11Resource",  d3d11_header, inheritable, pure.} = object of ID3D11DeviceChild
+        # GetType*: proc(pResourceDimension: ptr D3D11_RESOURCE_DIMENSION): void {.stdcall.}
+        SetEvictionPriority*: proc(EvictionPriority: UINT): void {.stdcall.}
+        GetEvictionPriority*: proc(): UINT {.stdcall.}
+    ID3D11Texture2D* {.importcpp: "ID3D11Texture2D",  d3d11_header, inheritable, pure.} = object of ID3D11Resource
+        GetDesc*: proc(pDesc: ptr D3D11_TEXTURE2D_DESC): void {.stdcall.}
+    ID3D11DeviceContext* {.importcpp: "ID3D11DeviceContext",  d3d11_header, inheritable, pure.} = object of ID3D11DeviceChild
+    ID3D11Device* {.importcpp: "ID3D11Device",  d3d11_header, inheritable, pure.} = object of IUnknownVtbl
+        CreateRenderTargetView*: proc(pResource: ptr ID3D11Resource, pDesc: ptr D3D11_RENDER_TARGET_VIEW_DESC, ppRTView: ptr ptr ID3D11RenderTargetView): HRESULT {.stdcall.}
+
+type
+    #--------------------------------------------------------------------- IDXGI
+    IDXGIObject* {.importcpp: "IDXGIObject",  d3d11_header, inheritable, pure.} = object of IUnknownVtbl
+    IDXGIDeviceSubObject* {.importcpp: "IDXGIDeviceSubObject",  d3d11_header, inheritable, pure.} = object of IDXGIObject
+    IDXGISwapChain* {.importcpp: "IDXGISwapChain",  d3d11_header, inheritable, pure.} = object of IDXGIDeviceSubObject
+        GetBuffer*: proc(Buffer: UINT, riid: REFIID, ppSurface: ptr pointer): HRESULT {.stdcall.}
 
 type 
     #--------------------------------------------------------------------- DXGIType
@@ -269,99 +313,4 @@ type
         GetDesc*: proc(pDesc: ptr DXGI_ADAPTER_DESC): HRESULT {.stdcall.}
         CheckInterfaceSupport*: proc(InterfaceName: REFGUID, pUMDVersion: ptr LARGE_INTEGER): HRESULT {.stdcall.}
 
-
-proc D3D11CreateDeviceAndSwapChain(pAdapter: ptr IDXGIAdapter, DriverType: D3D_DRIVER_TYPE, Software: HMODULE, Flags: UINT, pFeatureLevels: ptr D3D_FEATURE_LEVEL, FeatureLevels: UINT, SDKVersion: UINT, pSwapChainDesc: ptr DXGI_SWAP_CHAIN_DESC, ppSwapChain: ptr IDXGISwapChain, ppDevice: ptr ID3D11Device, pFeatureLevel: ptr D3D_FEATURE_LEVEL, ppImmediateContext: ID3D11DeviceContext ): HRESULT {.importcpp: "D3D11CreateDeviceAndSwapChain", d3d11_header, stdcall, discardable.}
-
-var 
-    g_pd3dDevice: ptr ID3D11Device = nil
-    g_pd3dDeviceContext: ptr ID3D11DeviceContext = nil
-    g_pSwapChain: ptr IDXGISwapChain = nil
-    g_ResizeWidth: UINT = 0
-    g_ResizeHeight: UINT = 0
-    g_mainRenderTargetView: ptr ID3D11RenderTargetView = nil
- 
-
-proc CreateDeviceD3D(hWnd: HWND): bool = 
-    var 
-        sd: DXGI_SWAP_CHAIN_DESC
-        createDeviceFlags: UINT = 0
-        featureLevel: D3D_FEATURE_LEVEL
-
-    ZeroMemory(sd.addr, sizeof(sd))
-    sd.BufferCount = 2
-    sd.BufferDesc.Width = 0
-    sd.BufferDesc.Height = 0
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM
-    sd.BufferDesc.RefreshRate.Numerator = 60
-    sd.BufferDesc.RefreshRate.Denominator = 1
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH.UINT
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
-    sd.OutputWindow = hWnd
-    sd.SampleDesc.Count = 1
-    sd.SampleDesc.Quality = 0
-    sd.Windowed = true
-    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD
-
-    # const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, }
-    # var res: HRESULT = D3D11CreateDeviceAndSwapChain(nil, D3D_DRIVER_TYPE_HARDWARE, nil, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, sd.addr, g_pSwapChain.addr, g_pd3dDevice.addr, featureLevel.addr, g_pd3dDeviceContext.addr)
-    # if (res == DXGI_ERROR_UNSUPPORTED)
-        # res = D3D11CreateDeviceAndSwapChain(nil, D3D_DRIVER_TYPE_WARP, nil, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, sd.addr, g_pSwapChain.addr, g_pd3dDevice.addr, featureLevel.addr, g_pd3dDeviceContext.addr)
-    # if (res != S_OK)
-        # return false
-
-    # CreateRenderTarget()
-    # return true
-
-
-proc WindowProc(hwnd: HWND, message: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.} =
-  case message
-  of WM_PAINT:
-    var ps: PAINTSTRUCT
-    var hdc = BeginPaint(hwnd, ps)
-    defer: EndPaint(hwnd, ps)
-
-    var rect: RECT
-    GetClientRect(hwnd, rect)
-    DrawText(hdc, "Hello, Windows!", -1, rect, DT_SINGLELINE or DT_CENTER or DT_VCENTER)
-    return 0
-
-  of WM_DESTROY:
-    PostQuitMessage(0)
-    return 0
-
-  else:
-    return DefWindowProc(hwnd, message, wParam, lParam)
-
-proc main() =
-    var
-        hInstance = GetModuleHandle(nil)
-        hwnd: HWND
-        msg: MSG
-        wndclass: WNDCLASS
-
-    wndclass.style = CS_HREDRAW or CS_VREDRAW
-    wndclass.lpfnWndProc = WindowProc
-    wndclass.cbClsExtra = 0
-    wndclass.cbWndExtra = 0
-    wndclass.hInstance = hInstance
-    wndclass.hIcon = LoadIcon(0, IDI_APPLICATION)
-    wndclass.hCursor = LoadCursor(0, IDC_ARROW)
-    wndclass.hbrBackground = GetStockObject(WHITE_BRUSH)
-    wndclass.lpszMenuName = nil
-    wndclass.lpszClassName = "HelloWin"
-
-    if RegisterClass(wndclass) == 0:
-        MessageBox(0, "This program requires Windows NT!", "HelloWin", MB_ICONERROR)
-        return
-
-    hwnd = CreateWindow("HelloWin", "The Hello Program", WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-        0, 0, hInstance, nil)
-
-    ShowWindow(hwnd, SW_SHOW)
-    UpdateWindow(hwnd)
-    while GetMessage(msg, 0, 0, 0) != 0:
-        TranslateMessage(msg)
-        DispatchMessage(msg)
-
-main()
+proc D3D11CreateDeviceAndSwapChain*(pAdapter: ptr IDXGIAdapter, DriverType: D3D_DRIVER_TYPE, Software: HMODULE, Flags: UINT, pFeatureLevels: ptr D3D_FEATURE_LEVEL, FeatureLevels: UINT, SDKVersion: UINT, pSwapChainDesc: ptr DXGI_SWAP_CHAIN_DESC, ppSwapChain: ptr ptr IDXGISwapChain, ppDevice: ptr ptr ID3D11Device, pFeatureLevel: ptr D3D_FEATURE_LEVEL, ppImmediateContext: ptr ptr ID3D11DeviceContext ): HRESULT {.importcpp: "D3D11CreateDeviceAndSwapChain(@)", d3d11_header, stdcall, discardable.}
